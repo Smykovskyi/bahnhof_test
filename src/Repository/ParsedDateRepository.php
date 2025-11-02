@@ -16,6 +16,17 @@ class ParsedDateRepository extends ServiceEntityRepository
         parent::__construct($registry, ParsedDate::class);
     }
 
+    /**
+     * @method findByDateString
+     * @param string $dateString
+     * @return ParsedDate|null
+     */
+    public function findByDateString(string $dateString): ?ParsedDate
+    {
+        $data = $this->findOneBy(['dateString' => $dateString]);
+        return $data;
+    }
+
     //    /**
     //     * @return ParsedDate[] Returns an array of ParsedDate objects
     //     */
