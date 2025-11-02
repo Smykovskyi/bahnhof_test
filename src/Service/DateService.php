@@ -4,13 +4,20 @@ namespace App\Service;
 
 use App\Entity\ParsedDate;
 use Doctrine\ORM\EntityManagerInterface;
+use Psr\Cache\CacheItemInterface;
+use Psr\Log\LoggerInterface;
+use Symfony\Contracts\Cache\CacheInterface;
 
 class DateService
 {
     private EntityManagerInterface $entityManager;
-    public function __construct(EntityManagerInterface $entityManager)
+    private LoggerInterface $logger;
+    private CacheInterface $cache;
+    public function __construct(EntityManagerInterface $entityManager, CacheInterface $cache, LoggerInterface $logger)
     {
         $this->entityManager = $entityManager;
+        $this->cache = $cache;
+        $this->logger = $logger;
     }
 
     /**
@@ -106,7 +113,16 @@ class DateService
      */
     public function getAllExistingData(): ?array
     {
-        $items = $this->entityManager->getRepository(ParsedDate::class)->findAll();
+        $items = [];
+        try {
+            $items = $this->cache->get('parsed_date', function (CacheItemInterface $item) {
+                $item->expiresAfter(86400);
+                return $this->entityManager->getRepository(ParsedDate::class)->findAll();
+            });
+        } catch (\Throwable $exception) {
+            $this->logger->critical(sprintf('Failed to fetch database: %s', $exception->getMessage()));
+        }
+
         $result = [];
 
         foreach ($items as $item) {
